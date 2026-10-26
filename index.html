@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>剑桥英语分级自测</title>
+  <style>
+    * {box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;margin:0;padding:0}
+    body {background:#f7f8fa;color:#222;padding:16px;max-width:720px;margin:0 auto}
+    .box {background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 10px #00000010}
+    .title {text-align:center;font-size:24px;font-weight:700;margin-bottom:8px}
+    .desc {text-align:center;color:#666;margin-bottom:24px}
+    .input-wrap {margin:16px 0}
+    input[type="password"], input[type="text"] {width:100%;padding:12px 14px;border:1px solid #ddd;border-radius:8px;font-size:16px}
+    button {width:100%;padding:13px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-size:16px;font-weight:600;cursor:pointer;margin-top:8px}
+    button:hover {background:#1d4ed8}
+    .question {margin:24px 0}
+    .q-title {font-weight:600;margin-bottom:10px;line-height:1.5}
+    .opt {border:1px solid #e5e7eb;border-radius:8px;padding:12px;margin:8px 0;cursor:pointer}
+    .opt:hover {border-color:#2563eb;background:#f0f6ff}
+    .opt.selected {border-color:#2563eb;background:#dbeafe}
+    .result {display:none;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:20px;margin-top:20px}
+    .err {color:#dc2626;text-align:center;margin-top:10px}
+    .hide {display:none}
+  </style>
+</head>
+<body>
+<div id="page-lock" class="box">
+  <div class="title">剑桥英语分级自测</div>
+  <div class="desc">输入访问密码，解锁自测题目<br>本测试仅为水平粗测，非正式剑桥考试</div>
+  <div class="input-wrap">
+    <input type="password" id="pwd" placeholder="请输入访问密码">
+  </div>
+  <button onclick="checkPwd()">进入测试</button>
+  <div id="pwdErr" class="err hide">密码错误，请联系老师获取最新密码</div>
+</div>
+
+<div id="page-quiz" class="hide">
+  <div class="box">
+    <div class="title">剑桥英语分级自测（25题）</div>
+    <div class="desc">请选出最佳答案，全部做完后点击提交查看结果</div>
+    <div id="quiz-container"></div>
+    <button onclick="submitQuiz()">提交答卷，查看分级结果</button>
+    <div class="result" id="resultBox">
+      <h3>✅ 你的自测结果</h3>
+      <p id="scoreText"></p>
+      <p id="levelText"></p>
+      <p id="suggestText"></p>
+      <br>
+      <button onclick="exportRecord()">复制本次答卷记录（发给老师存档）</button>
+      <button onclick="location.reload()" style="background:#6b7280">重新测试</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== 在这里定期修改访问密码 ==========
+const passcode = "test123";
+// ============================================
+
+// 题库 和标准答案
+const questions = [
+  {q:`"Excuse me, how much is this T-shirt?"`,opts:["A. It's twenty pounds.","B. It's in the shop window.","C. I'm afraid it's cold."],ans:"A. It's twenty pounds."},
+  {q:`"How often do you go swimming?"`,opts:["A. For two hours.","B. Twice a week.","C. At the weekend pool."],ans:"B. Twice a week."},
+  {q:`"Would you like a cup of tea?"`,opts:["A. Yes, please.","B. No, I'm tired.","C. I like it very much."],ans:"A. Yes, please."},
+  {q:`"I'm really sorry I'm late. The bus broke down."`,opts:["A. You're welcome.","B. Don't worry about it.","C. I'm afraid not."],ans:"B. Don't worry about it."},
+  {q:`"What time does the last train leave?"`,opts:["A. At half past eleven.","B. For about twenty minutes.","C. It's a long journey."],ans:"A. At half past eleven."},
+  {q:`I ___ my keys at home this morning.`,opts:["A. forgot","B. left","C. lost"],ans:"B. left"},
+  {q:`There's ___ milk left, so I need to buy some.`,opts:["A. little","B. a little","C. few"],ans:"A. little"},
+  {q:`She's good ___ drawing and painting.`,opts:["A. in","B. for","C. at"],ans:"C. at"},
+  {q:`We ___ to the beach if the weather is nice tomorrow.`,opts:["A. go","B. will go","C. went"],ans:"B. will go"},
+  {q:`This suitcase is ___ heavy that I can't lift it.`,opts:["A. too","B. very","C. so"],ans:"C. so"},
+  {q:`He's worked at this company ___ 2015.`,opts:["A. since","B. for","C. during"],ans:"A. since"},
+  {q:`I don't mind ___ late on Fridays.`,opts:["A. to work","B. working","C. work"],ans:"B. working"},
+  {q:`The parcel ___ yesterday morning.`,opts:["A. sent","B. was sent","C. has sent"],ans:"B. was sent"},
+  {q:`If I had more free time, I ___ more exercise.`,opts:["A. will take","B. take","C. would take"],ans:"C. would take"},
+  {q:`Neither of the answers ___ correct.`,opts:["A. is","B. are","C. were"],ans:"A. is"},
+  {q:`By the time we arrived at the cinema, the film ___.`,opts:["A. has already started","B. had already started","C. already started"],ans:"B. had already started"},
+  {q:`You ___ have told me about the meeting earlier!`,opts:["A. must","B. should","C. would"],ans:"B. should"},
+  {q:`It's so noisy in here that I can't ___ what you're saying.`,opts:["A. hear","B. listen","C. sound"],ans:"A. hear"},
+  {q:`The exhibition, ___ opened last week, has attracted thousands of visitors.`,opts:["A. which","B. what","C. who"],ans:"A. which"},
+  {q:`Hardly ___ entered the room when the phone rang.`,opts:["A. had he","B. he had","C. did he"],ans:"A. had he"},
+  {q:`Not only ___ the race, but she also broke the record.`,opts:["A. she won","B. did she win","C. won she"],ans:"B. did she win"},
+  {q:`I'd rather you ___ it to anyone else for now.`,opts:["A. didn't mention","B. don't mention","C. won't mention"],ans:"A. didn't mention"},
+  {q:`The manager insisted that the report ___ before Friday.`,opts:["A. is submitted","B. be submitted","C. was submitted"],ans:"B. be submitted"},
+  {q:`It's high time we ___ addressing this problem seriously.`,opts:["A. start","B. started","C. will start"],ans:"B. started"},
+  {q:`Scarcely had the play begun ___ the fire alarm went off.`,opts:["A. when","B. than","C. that"],ans:"A. when"},
+];
+
+// 分级规则 和之前多维表格完全一致
+function getLevel(score){
+  if(score <=5) return {level:"低于 A2",suggest:"先巩固基础词汇句型，从 A2 Key（KET）入门学习"}
+  if(score <=10) return {level:"A2",suggest:"适合备考 A2 Key（KET）"}
+  if(score <=12) return {level:"A2–B1",suggest:"可以先备考KET，后续过渡 B1 Preliminary（PET）"}
+  if(score <=15) return {level:"B1",suggest:"适合备考 B1 Preliminary（PET）"}
+  if(score <=17) return {level:"B1–B2",suggest:"PET保底，可以尝试B2 First（FCE）样题"}
+  if(score <=19) return {level:"B2",suggest:"适合备考 B2 First（FCE）"}
+  if(score <=21) return {level:"B2–C1",suggest:"FCE高分目标，之后衔接 C1 Advanced（CAE）"}
+  if(score <=22) return {level:"C1–C2",suggest:"可备考 CAE 或 C2 Proficiency（CPE）"}
+  return {level:"C2",suggest:"C2水平，可以备考 CPE 或 Linguaskill 获取分数证明"}
+}
+
+// 密码校验
+function checkPwd(){
+  const input = document.getElementById("pwd").value.trim()
+  if(input === passcode){
+    document.getElementById("page-lock").classList.add("hide")
+    document.getElementById("page-quiz").classList.remove("hide")
+    renderQuiz()
+  }else{
+    document.getElementById("pwdErr").classList.remove("hide")
+  }
+}
+
+// 渲染题目
+function renderQuiz(){
+  const wrap = document.getElementById("quiz-container")
+  let html = ""
+  questions.forEach((item,idx)=>{
+    html += `<div class="question">
+      <div class="q-title">${idx+1}. ${item.q}</div>
+      ${item.opts.map(opt=>`
+        <div class="opt" onclick="selectOpt(${idx},'${opt}')" data-q="${idx}" data-val="${opt}">${opt}</div>
+      `).join("")}
+    </div>`
+  })
+  wrap.innerHTML = html
+}
+
+// 选择答案
+let userAnswers = Array(questions.length).fill(null)
+function selectOpt(qIdx,val){
+  userAnswers[qIdx] = val
+  const allOpts = document.querySelectorAll(`.opt[data-q="${qIdx}"]`)
+  allOpts.forEach(el=>el.classList.remove("selected"))
+  event.target.classList.add("selected")
+}
+
+// 提交判分
+function submitQuiz(){
+  let correct = 0
+  for(let i=0;i<questions.length;i++){
+    if(userAnswers[i] === questions[i].ans) correct++
+  }
+  const res = getLevel(correct)
+  document.getElementById("scoreText").innerText = `得分：${correct} / 25`
+  document.getElementById("levelText").innerText = `CEFR水平：${res.level}`
+  document.getElementById("suggestText").innerText = `备考建议：${res.suggest}`
+  document.getElementById("resultBox").style.display="block"
+}
+
+// 导出答卷文本，复制发给老师
+function exportRecord(){
+  let txt = "剑桥自测答卷记录\n"
+  const now = new Date().toLocaleString()
+  txt += `提交时间：${now}\n`
+  let correct = 0
+  for(let i=0;i<questions.length;i++){
+    if(userAnswers[i] === questions[i].ans) correct++
+    txt += `${i+1}|你的答案：${userAnswers[i]||"未作答"}|标准答案：${questions[i].ans}\n`
+  }
+  txt += `总分：${correct}/25`
+  navigator.clipboard.writeText(txt).then(()=>alert("答卷记录已经复制！粘贴到飞书表格存档即可"))
+}
+</script>
+</body>
+</html>
