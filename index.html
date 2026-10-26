@@ -11,7 +11,7 @@
     .title {text-align:center;font-size:24px;font-weight:700;margin-bottom:8px}
     .desc {text-align:center;color:#666;margin-bottom:24px}
     .input-wrap {margin:16px 0}
-    input[type="password"], input[type="text"] {width:100%;padding:12px 14px;border:1px solid #ddd;border-radius:8px;font-size:16px}
+    input[type="password"] {width:100%;padding:12px 14px;border:1px solid #ddd;border-radius:8px;font-size:16px}
     button {width:100%;padding:13px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-size:16px;font-weight:600;cursor:pointer;margin-top:8px}
     button:hover {background:#1d4ed8}
     .question {margin:24px 0}
@@ -42,7 +42,7 @@
     <div id="quiz-container"></div>
     <button onclick="submitQuiz()">提交答卷，查看分级结果</button>
     <div class="result" id="resultBox">
-      <h3>✅ 你的自测结果</h3>
+      <h3>你的自测结果</h3>
       <p id="scoreText"></p>
       <p id="levelText"></p>
       <p id="suggestText"></p>
@@ -58,7 +58,6 @@
 const passcode = "test123";
 // ============================================
 
-// 题库 和标准答案
 const questions = [
   {q:`"Excuse me, how much is this T-shirt?"`,opts:["A. It's twenty pounds.","B. It's in the shop window.","C. I'm afraid it's cold."],ans:"A. It's twenty pounds."},
   {q:`"How often do you go swimming?"`,opts:["A. For two hours.","B. Twice a week.","C. At the weekend pool."],ans:"B. Twice a week."},
@@ -87,7 +86,6 @@ const questions = [
   {q:`Scarcely had the play begun ___ the fire alarm went off.`,opts:["A. when","B. than","C. that"],ans:"A. when"},
 ];
 
-// 分级规则 和之前多维表格完全一致
 function getLevel(score){
   if(score <=5) return {level:"低于 A2",suggest:"先巩固基础词汇句型，从 A2 Key（KET）入门学习"}
   if(score <=10) return {level:"A2",suggest:"适合备考 A2 Key（KET）"}
@@ -100,7 +98,6 @@ function getLevel(score){
   return {level:"C2",suggest:"C2水平，可以备考 CPE 或 Linguaskill 获取分数证明"}
 }
 
-// 密码校验
 function checkPwd(){
   const input = document.getElementById("pwd").value.trim()
   if(input === passcode){
@@ -112,31 +109,33 @@ function checkPwd(){
   }
 }
 
-// 渲染题目
+let userAnswers = Array(questions.length).fill(null)
+
 function renderQuiz(){
   const wrap = document.getElementById("quiz-container")
   let html = ""
   questions.forEach((item,idx)=>{
     html += `<div class="question">
       <div class="q-title">${idx+1}. ${item.q}</div>
-      ${item.opts.map(opt=>`
-        <div class="opt" onclick="selectOpt(${idx},'${opt}')" data-q="${idx}" data-val="${opt}">${opt}</div>
-      `).join("")}
+      ${item.opts.map((opt,oi)=>
+        `<div class="opt" data-q="${idx}" data-oi="${oi}">${opt}</div>`
+      ).join("")}
     </div>`
   })
   wrap.innerHTML = html
 }
 
-// 选择答案
-let userAnswers = Array(questions.length).fill(null)
-function selectOpt(qIdx,val){
-  userAnswers[qIdx] = val
-  const allOpts = document.querySelectorAll(`.opt[data-q="${qIdx}"]`)
-  allOpts.forEach(el=>el.classList.remove("selected"))
-  event.target.classList.add("selected")
-}
+// 事件委托：点击任何选项都生效（不再受引号影响）
+document.getElementById("quiz-container").addEventListener("click", function(e){
+  const el = e.target.closest(".opt")
+  if(!el) return
+  const qIdx = parseInt(el.getAttribute("data-q"), 10)
+  const oi = parseInt(el.getAttribute("data-oi"), 10)
+  userAnswers[qIdx] = questions[qIdx].opts[oi]
+  document.querySelectorAll(`.opt[data-q="${qIdx}"]`).forEach(s=>s.classList.remove("selected"))
+  el.classList.add("selected")
+})
 
-// 提交判分
 function submitQuiz(){
   let correct = 0
   for(let i=0;i<questions.length;i++){
@@ -149,18 +148,16 @@ function submitQuiz(){
   document.getElementById("resultBox").style.display="block"
 }
 
-// 导出答卷文本，复制发给老师
 function exportRecord(){
   let txt = "剑桥自测答卷记录\n"
-  const now = new Date().toLocaleString()
-  txt += `提交时间：${now}\n`
+  txt += `提交时间：${new Date().toLocaleString()}\n`
   let correct = 0
   for(let i=0;i<questions.length;i++){
     if(userAnswers[i] === questions[i].ans) correct++
     txt += `${i+1}|你的答案：${userAnswers[i]||"未作答"}|标准答案：${questions[i].ans}\n`
   }
   txt += `总分：${correct}/25`
-  navigator.clipboard.writeText(txt).then(()=>alert("答卷记录已经复制！粘贴到飞书表格存档即可"))
+  navigator.clipboard.writeText(txt).then(()=>alert("答卷记录已复制，粘贴给老师存档即可"))
 }
 </script>
 </body>
